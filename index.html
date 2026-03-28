@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Games codebase — engineering dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #0c0f14;
+      --panel: #141a22;
+      --border: #243044;
+      --text: #e8edf4;
+      --muted: #8b9bb4;
+      --accent: #3d8bfd;
+      --ok: #3ecf8e;
+      --warn: #f0c14b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    a { color: var(--accent); }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+    header.hero {
+      background: linear-gradient(145deg, #152032 0%, var(--panel) 50%);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem 1.75rem;
+      margin-bottom: 1.5rem;
+    }
+    header.hero h1 { margin: 0 0 0.35rem; font-size: 1.65rem; }
+    header.hero p { margin: 0.35rem 0; color: var(--muted); max-width: 72ch; }
+    .badge-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; }
+    .badge {
+      font-size: 0.8rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(61, 139, 253, 0.12);
+      color: #b6d4ff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.1rem;
+    }
+    .card h3 { margin: 0 0 0.35rem; font-size: 0.85rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+    .card .num { font-size: 1.75rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .card .sub { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+    section { margin-bottom: 2rem; }
+    section h2 {
+      font-size: 1.15rem;
+      margin: 0 0 0.75rem;
+      padding-bottom: 0.35rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .charts {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+    }
+    .chart-box { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; min-height: 320px; }
+    .mermaid {
+      background: #fff;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    th, td { padding: 0.55rem 0.65rem; text-align: left; border-bottom: 1px solid var(--border); }
+    th { background: #1a2230; color: var(--muted); font-weight: 600; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.03em; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(61, 139, 253, 0.06); }
+    .muted { color: var(--muted); }
+    .callout {
+      border-left: 4px solid var(--accent);
+      padding: 0.75rem 1rem;
+      background: rgba(61, 139, 253, 0.08);
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+      font-size: 0.92rem;
+    }
+    footer { color: var(--muted); font-size: 0.85rem; margin-top: 2rem; }
+    canvas { max-height: 280px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>Games platform — codebase dashboard</h1>
+      <p>
+        Consolidated view of local Git repositories under this workspace: repository counts, commit history,
+        contributors, and lines of code measured with <strong>cloc</strong> using strict exclusions for non-application
+        artifacts (dependency trees, caches, VCS metadata, virtualenvs, and all <code>.json</code> files).
+      </p>
+      <p>
+        <strong>Security &amp; confidentiality:</strong> These repositories are <strong>private</strong>.
+        Source code and release artifacts have been reviewed under a <strong>third-party security audit</strong>
+        (external assessor). Treat all statistics and names as sensitive; share this dashboard only with authorized personnel.
+      </p>
+      <div class="badge-row">
+        <span class="badge">Private org · audited codebase</span>
+         </div>
+    </header>
+
+    <div class="grid">
+      <div class="card"><h3>Repositories</h3><div class="num">17</div><div class="sub">Git roots in workspace</div></div>
+      <div class="card"><h3>Commits (sum)</h3><div class="num">875</div><div class="sub">All-time, all repos</div></div>
+      <div class="card"><h3>Contributors</h3><div class="num">13</div><div class="sub">Unique author emails (union)</div></div>
+      <div class="card"><h3>Code files (cloc)</h3><div class="num">718</div><div class="sub">Excl. JSON &amp; excluded dirs</div></div>
+      <div class="card"><h3>Lines of code (cloc)</h3><div class="num">130,705</div><div class="sub">Code column only</div></div>
+    </div>
+
+    <div class="callout">
+      <strong>cloc methodology:</strong> JSON files excluded via cloc --not-match-f=\.json$ (includes package.json and other .json). Excluded dirs: node_modules, __pycache__, .git, .venv, venv, dist, build, coverage, .next, .turbo, target, vendor, artifacts.
+      Generated <span class="muted">2026-03-28 19:00 UTC</span> 
+    </div>
+
+    <section>
+      <h2>System architecture</h2>
+      <p class="muted">High-level map of how game clients, on-chain exchange logic, randomness, and data pipelines relate. Adjust naming to match your deployment topology.</p>
+      <div class="mermaid">
+flowchart TB
+  subgraph FE["Game frontends (React / webpack)"]
+    direction TB
+    G1["Title UIs: yolo, limbo, roulette, slots, baccarat, ..."]
+    G2["Provably-fair games: dice, hashdice, coinflip, sevenupdown, dragontiger, andarbahar, lottery"]
+  end
+  subgraph SVC["Backend & platform"]
+    AIBS["aib_services — APIs / orchestration"]
+    AIBR["aib-randomness — RNG / fairness utilities"]
+  end
+  subgraph CHAIN["On-chain"]
+    EX["exchange-v2 — CosmWasm / Rust contracts"]
+  end
+  subgraph DATA["Data & analytics"]
+    CDS["casino_data_scripts"]
+    BP["binary_predictions"]
+  end
+  FE --> AIBS
+  FE --> AIBR
+  AIBS --> EX
+  AIBR --> FE
+  CDS --> AIBS
+  BP --> CDS
+      </div>
+    </section>
+
+    <section>
+      <h2>Repository dependency sketch</h2>
+      <p class="muted">Logical dependency flow (not a deployment diagram).</p>
+      <div class="mermaid">
+flowchart LR
+  UI["Many game repos"] --> API["aib_services"]
+  UI --> RNG["aib-randomness"]
+  API --> CW["exchange-v2"]
+  SCRIPTS["casino_data_scripts"] --> API
+  BP["binary_predictions"] --> SCRIPTS
+      </div>
+    </section>
+
+    <section>
+      <h2>Charts</h2>
+      <div class="charts">
+        <div class="chart-box">
+          <h3 style="margin-top:0;font-size:0.95rem;">Lines of code by language (cloc)</h3>
+          <canvas id="chartLang"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3 style="margin-top:0;font-size:0.95rem;">Commits per repository</h3>
+          <canvas id="chartCommits"></canvas>
+        </div>
+        <div class="chart-box">
+          <h3 style="margin-top:0;font-size:0.95rem;">Code lines per repository (cloc)</h3>
+          <canvas id="chartLines"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Commit activity over time (stacked by repo)</h2>
+      <p class="muted">Last 24 months per repository, aggregated from local Git history.</p>
+      <div class="chart-box">
+        <canvas id="chartActivity"></canvas>
+      </div>
+    </section>
+
+    <section>
+      <h2>Per-repository metrics</h2>
+      <p class="muted">Fork / Archived / Private require GitHub API access. Run <code>gh auth login</code> and re-run <code>python3 generate_dashboard.py</code> to populate those columns for private repos.</p>
+      <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Repository</th>
+              <th>Commits</th>
+              <th>Contributors</th>
+              <th>Code files</th>
+              <th>Code lines</th>
+              <th>Fork</th>
+              <th>Archived</th>
+              <th>Private (GH)</th>
+              <th>Last commit</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>aib-randomness</strong></td><td>4</td><td>1</td><td>7</td><td>371</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-02-19</td></tr><tr><td><strong>aib_services</strong></td><td>478</td><td>5</td><td>146</td><td>20,228</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-02-12</td></tr><tr><td><strong>andarbahar</strong></td><td>5</td><td>3</td><td>45</td><td>5,243</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2024-04-03</td></tr><tr><td><strong>baccarat</strong></td><td>3</td><td>3</td><td>41</td><td>6,534</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-07-14</td></tr><tr><td><strong>binary_predictions</strong></td><td>1</td><td>1</td><td>13</td><td>1,050</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-01-13</td></tr><tr><td><strong>casino_data_scripts</strong></td><td>343</td><td>5</td><td>12</td><td>2,654</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-02-11</td></tr><tr><td><strong>classicdice</strong></td><td>4</td><td>4</td><td>34</td><td>5,694</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-07-14</td></tr><tr><td><strong>coinflip</strong></td><td>6</td><td>4</td><td>34</td><td>5,688</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-07-14</td></tr><tr><td><strong>dragontiger</strong></td><td>3</td><td>3</td><td>46</td><td>5,610</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2024-04-04</td></tr><tr><td><strong>exchange-v2</strong></td><td>4</td><td>2</td><td>14</td><td>3,023</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2024-10-14</td></tr><tr><td><strong>hashdice</strong></td><td>3</td><td>3</td><td>32</td><td>4,447</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2024-04-04</td></tr><tr><td><strong>limbo</strong></td><td>4</td><td>3</td><td>37</td><td>7,110</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2024-04-04</td></tr><tr><td><strong>lottery</strong></td><td>3</td><td>3</td><td>35</td><td>4,266</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2024-04-04</td></tr><tr><td><strong>roulette</strong></td><td>4</td><td>4</td><td>49</td><td>10,893</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-07-14</td></tr><tr><td><strong>sevenupdown</strong></td><td>4</td><td>4</td><td>44</td><td>5,847</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-07-14</td></tr><tr><td><strong>slots</strong></td><td>5</td><td>4</td><td>33</td><td>4,616</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2025-07-14</td></tr><tr><td><strong>yolo</strong></td><td>1</td><td>1</td><td>42</td><td>5,321</td><td>No</td><td>No</td><td>Yes</td><td class='muted'>2024-06-02</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <h2>Embedded data (JSON)</h2>
+      <p class="muted">Machine-readable snapshot for tooling.</p>
+      <pre style="background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:1rem;overflow:auto;max-height:240px;font-size:0.75rem;">{
+"generated_at": "2026-03-28 19:00 UTC",
+"repo_count": 17,
+"total_commits": 875,
+"unique_contributors": 13,
+"total_code_files": 718,
+"total_code_lines": 130705,
+"languages": [
+{
+"name": "JavaScript",
+"files": 242,
+"code": 38491
+},
+{
+"name": "Rust",
+"files": 168,
+"code": 35910
+},
+{
+"name": "SCSS",
+"files": 29,
+"code": 25452
+},
+{
+"name": "Python",
+"files": 141,
+"code": 17861
+},
+{
+"name": "Markdown",
+"files": 36,
+"code": 7549
+},
+{
+"name": "SVG",
+"files": 21,
+"code": 1890
+},
+{
+"name": "YAML",
+"files": 20,
+"code": 1073
+},
+{
+"name": "HTML",
+"files": 6,
+"code": 829
+},
+{
+"name": "TOML",
+"files": 26,
+"code": 644
+},
+{
+"name": "Bourne Shell",
+"files": 14,
+"code": 325
+},
+{
+"name": "Text",
+"files": 4,
+"code": 289
+},
+{
+"name": "Go",
+"files": 6,
+"code": 279
+},
+{
+"name": "Dockerfile",
+"files": 1,
+"code": 47
+},
+{
+"name": "CSS",
+"files": 2,
+"code": 45
+},
+{
+"name": "INI",
+"files": 2,
+"code": 21
+}
+],
+"repos": [
+{
+"name": "aib-randomness",
+"commits": 4,
+"contributors": 1,
+"code_files": 7,
+"code_lines": 371,
+"last_commit": "2025-02-19T21:27:12+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "aib-randomness",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "aib_services",
+"commits": 478,
+"contributors": 5,
+"code_files": 146,
+"code_lines": 20228,
+"last_commit": "2025-02-12T12:26:02+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "aib_services",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "andarbahar",
+"commits": 5,
+"contributors": 3,
+"code_files": 45,
+"code_lines": 5243,
+"last_commit": "2024-04-03T13:27:42+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "andarbahar",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "baccarat",
+"commits": 3,
+"contributors": 3,
+"code_files": 41,
+"code_lines": 6534,
+"last_commit": "2025-07-14T22:28:16+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "baccarat",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "binary_predictions",
+"commits": 1,
+"contributors": 1,
+"code_files": 13,
+"code_lines": 1050,
+"last_commit": "2025-01-13T10:12:36+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "binary_predictions",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "casino_data_scripts",
+"commits": 343,
+"contributors": 5,
+"code_files": 12,
+"code_lines": 2654,
+"last_commit": "2025-02-11T15:55:28+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "casino_data_scripts",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "classicdice",
+"commits": 4,
+"contributors": 4,
+"code_files": 34,
+"code_lines": 5694,
+"last_commit": "2025-07-14T22:28:54+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "classicdice",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "coinflip",
+"commits": 6,
+"contributors": 4,
+"code_files": 34,
+"code_lines": 5688,
+"last_commit": "2025-07-14T22:27:31+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "coinflip",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "dragontiger",
+"commits": 3,
+"contributors": 3,
+"code_files": 46,
+"code_lines": 5610,
+"last_commit": "2024-04-04T12:40:35+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "dragontiger",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "exchange-v2",
+"commits": 4,
+"contributors": 2,
+"code_files": 14,
+"code_lines": 3023,
+"last_commit": "2024-10-14T11:46:46+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "exchange-v2",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "hashdice",
+"commits": 3,
+"contributors": 3,
+"code_files": 32,
+"code_lines": 4447,
+"last_commit": "2024-04-04T12:39:51+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "hashdice",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "limbo",
+"commits": 4,
+"contributors": 3,
+"code_files": 37,
+"code_lines": 7110,
+"last_commit": "2024-04-04T12:39:22+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "limbo",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "lottery",
+"commits": 3,
+"contributors": 3,
+"code_files": 35,
+"code_lines": 4266,
+"last_commit": "2024-04-04T12:38:50+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "lottery",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "roulette",
+"commits": 4,
+"contributors": 4,
+"code_files": 49,
+"code_lines": 10893,
+"last_commit": "2025-07-14T22:26:30+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "roulette",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "sevenupdown",
+"commits": 4,
+"contributors": 4,
+"code_files": 44,
+"code_lines": 5847,
+"last_commit": "2025-07-14T22:29:27+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "sevenupdown",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "slots",
+"commits": 5,
+"contributors": 4,
+"code_files": 33,
+"code_lines": 4616,
+"last_commit": "2025-07-14T22:26:59+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "slots",
+"fork": false,
+"archived": false,
+"private": true
+},
+{
+"name": "yolo",
+"commits": 1,
+"contributors": 1,
+"code_files": 42,
+"code_lines": 5321,
+"last_commit": "2024-06-02T00:11:01+05:30",
+"github_owner": "AllInGaming1",
+"github_repo": "yolo",
+"fork": false,
+"archived": false,
+"private": true
+}
+],
+"activity": {
+"aib-randomness": {
+"2024-08": 2,
+"2025-02": 2
+},
+"aib_services": {
+"2024-04": 71,
+"2024-05": 100,
+"2024-06": 68,
+"2024-07": 69,
+"2024-08": 49,
+"2024-09": 18,
+"2024-10": 6,
+"2024-12": 2,
+"2025-01": 8,
+"2025-02": 8
+},
+"andarbahar": {
+"2024-03": 1,
+"2024-04": 4
+},
+"baccarat": {
+"2024-03": 1,
+"2024-04": 1,
+"2025-07": 1
+},
+"binary_predictions": {
+"2025-01": 1
+},
+"casino_data_scripts": {
+"2024-04": 22,
+"2024-05": 41,
+"2024-06": 40,
+"2024-07": 35,
+"2024-08": 25,
+"2024-09": 16,
+"2024-10": 5,
+"2024-11": 4,
+"2024-12": 22,
+"2025-01": 7,
+"2025-02": 12
+},
+"classicdice": {
+"2024-03": 1,
+"2024-04": 2,
+"2025-07": 1
+},
+"coinflip": {
+"2024-03": 1,
+"2024-04": 3,
+"2025-07": 2
+},
+"dragontiger": {
+"2024-03": 1,
+"2024-04": 2
+},
+"exchange-v2": {
+"2024-09": 1,
+"2024-10": 3
+},
+"hashdice": {
+"2024-03": 1,
+"2024-04": 2
+},
+"limbo": {
+"2024-03": 1,
+"2024-04": 3
+},
+"lottery": {
+"2024-03": 1,
+"2024-04": 2
+},
+"roulette": {
+"2024-03": 1,
+"2024-04": 2,
+"2025-07": 1
+},
+"sevenupdown": {
+"2024-03": 1,
+"2024-04": 2,
+"2025-07": 1
+},
+"slots": {
+"2024-03": 1,
+"2024-04": 2,
+"2025-07": 2
+},
+"yolo": {
+"2024-06": 1
+}
+},
+"cloc_exclude": "node_modules,__pycache__,.git,.venv,venv,dist,build,coverage,.next,.turbo,target,vendor,artifacts",
+"cloc_note": "JSON files excluded via cloc --not-match-f=\\.json$ (includes package.json and other .json). Excluded dirs: node_modules, __pycache__, .git, .venv, venv, dist, build, coverage, .next, .turbo, target, vendor, artifacts."
+}</pre>
+    </section>
+
+    <footer>
+      Dashboard generated from local <code>git</code> and <code>cloc</code> output. 
+    </footer>
+  </div>
+
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+
+    const palette = [
+      "#3d8bfd", "#3ecf8e", "#f0c14b", "#e05d8c", "#a78bfa", "#22d3ee", "#fb923c", "#4ade80",
+      "#f472b6", "#60a5fa", "#c084fc", "#fbbf24"
+    ];
+
+    const langLabels = ["JavaScript", "Rust", "SCSS", "Python", "Markdown", "SVG", "YAML", "HTML", "TOML", "Bourne Shell", "Text", "Go"];
+    const langCode = [38491, 35910, 25452, 17861, 7549, 1890, 1073, 829, 644, 325, 289, 279];
+    const repoNames = ["aib-randomness", "aib_services", "andarbahar", "baccarat", "binary_predictions", "casino_data_scripts", "classicdice", "coinflip", "dragontiger", "exchange-v2", "hashdice", "limbo", "lottery", "roulette", "sevenupdown", "slots", "yolo"];
+    const repoCommits = [4, 478, 5, 3, 1, 343, 4, 6, 3, 4, 3, 4, 3, 4, 4, 5, 1];
+    const repoLines = [371, 20228, 5243, 6534, 1050, 2654, 5694, 5688, 5610, 3023, 4447, 7110, 4266, 10893, 5847, 4616, 5321];
+    const activity = {"aib-randomness": {"2024-08": 2, "2025-02": 2}, "aib_services": {"2024-04": 71, "2024-05": 100, "2024-06": 68, "2024-07": 69, "2024-08": 49, "2024-09": 18, "2024-10": 6, "2024-12": 2, "2025-01": 8, "2025-02": 8}, "andarbahar": {"2024-03": 1, "2024-04": 4}, "baccarat": {"2024-03": 1, "2024-04": 1, "2025-07": 1}, "binary_predictions": {"2025-01": 1}, "casino_data_scripts": {"2024-04": 22, "2024-05": 41, "2024-06": 40, "2024-07": 35, "2024-08": 25, "2024-09": 16, "2024-10": 5, "2024-11": 4, "2024-12": 22, "2025-01": 7, "2025-02": 12}, "classicdice": {"2024-03": 1, "2024-04": 2, "2025-07": 1}, "coinflip": {"2024-03": 1, "2024-04": 3, "2025-07": 2}, "dragontiger": {"2024-03": 1, "2024-04": 2}, "exchange-v2": {"2024-09": 1, "2024-10": 3}, "hashdice": {"2024-03": 1, "2024-04": 2}, "limbo": {"2024-03": 1, "2024-04": 3}, "lottery": {"2024-03": 1, "2024-04": 2}, "roulette": {"2024-03": 1, "2024-04": 2, "2025-07": 1}, "sevenupdown": {"2024-03": 1, "2024-04": 2, "2025-07": 1}, "slots": {"2024-03": 1, "2024-04": 2, "2025-07": 2}, "yolo": {"2024-06": 1}};
+
+    function barColors(n) {
+      return Array.from({ length: n }, (_, i) => palette[i % palette.length]);
+    }
+
+    new Chart(document.getElementById("chartLang"), {
+      type: "doughnut",
+      data: {
+        labels: langLabels,
+        datasets: [{ data: langCode, backgroundColor: barColors(langLabels.length) }]
+      },
+      options: {
+        plugins: { legend: { position: "right" } },
+        maintainAspectRatio: false
+      }
+    });
+
+    new Chart(document.getElementById("chartCommits"), {
+      type: "bar",
+      data: {
+        labels: repoNames,
+        datasets: [{ label: "Commits", data: repoCommits, backgroundColor: "#3d8bfd" }]
+      },
+      options: {
+        indexAxis: "y",
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { color: "#243044" } }, y: { grid: { display: false } } },
+        maintainAspectRatio: false
+      }
+    });
+
+    new Chart(document.getElementById("chartLines"), {
+      type: "bar",
+      data: {
+        labels: repoNames,
+        datasets: [{ label: "LOC (code)", data: repoLines, backgroundColor: "#3ecf8e" }]
+      },
+      options: {
+        indexAxis: "y",
+        plugins: { legend: { display: false } },
+        scales: { x: { grid: { color: "#243044" } }, y: { grid: { display: false } } },
+        maintainAspectRatio: false
+      }
+    });
+
+    // Stacked activity: collect all months
+    const monthSet = new Set();
+    Object.values(activity).forEach((m) => {
+      Object.keys(m).forEach((k) => monthSet.add(k));
+    });
+    const months = Array.from(monthSet).sort();
+    const datasets = repoNames.map((name, i) => ({
+      label: name,
+      data: months.map((m) => (activity[name] && activity[name][m]) || 0),
+      backgroundColor: palette[i % palette.length],
+      stack: "a"
+    }));
+    new Chart(document.getElementById("chartActivity"), {
+      type: "bar",
+      data: { labels: months, datasets },
+      options: {
+        responsive: true,
+        scales: {
+          x: { stacked: true, grid: { color: "#243044" } },
+          y: { stacked: true, grid: { color: "#243044" } }
+        },
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10 } } }
+        },
+        maintainAspectRatio: false
+      }
+    });
+  </script>
+</body>
+</html>
